@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rend
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # single writer on a RWO PVC + hostPort — never two pods
+  selector:
+    matchLabels:
+      app: rend
+  template:
+    metadata:
+      labels:
+        app: rend
+    spec:
+      containers:
+        - name: rend-server
+          image: ghcr.io/siliconsaga/kubicrend:latest
+          imagePullPolicy: Always
+          env:
+            - name: REND_MODE
+              value: "modded"
+            - name: REND_GAME_PORT
+              value: "7777"
+            - name: REND_BEACON_PORT
+              value: "15000"
+            - name: REND_USERDIR
+              value: "/data"
+            - name: REND_CONFIG_SRC
+              value: "/config"
+          ports:
+            - name: game
+              containerPort: 7777
+              hostPort: 7777
+              protocol: UDP
+            - name: beacon
+              containerPort: 15000
+              hostPort: 15000
+              protocol: UDP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 3Gi
+            limits:
+              memory: 6Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rend-data
+        - name: config
+          configMap:
+            name: rend-config
