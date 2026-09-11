@@ -10,7 +10,9 @@
 # `wineuser` does not exist in the image's passwd file at build time (the base
 # entrypoint creates it on start), so ALL build steps run as root and hand
 # ownership of the baked dirs to uid 1010 at the end.
-FROM scottyhardy/docker-wine:latest
+# Pinned by digest for reproducible rebuilds/rollback (was :latest). This is the
+# audited base the image was validated on; bump the digest deliberately to refresh.
+FROM scottyhardy/docker-wine@sha256:477aae36af41923cfb5eefb23923b035f8010caa49eaded952316f937dd8a49b
 
 USER root
 

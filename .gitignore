@@ -1,5 +1,7 @@
 # Rendered per-instance overlays (start-server.sh output) — keep only committed flavors
 kustomize/overlays/*/
 !kustomize/overlays/plain/
+!kustomize/overlays/plain/**
 !kustomize/overlays/gitops/
+!kustomize/overlays/gitops/**
 .env

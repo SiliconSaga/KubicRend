@@ -344,7 +344,7 @@ Expected (success shape): UE4 log reaches `LogInit: Display: Game Engine Initial
 In a second terminal, exec into the running container:
 
 ```
-ws docker exec $(docker ps -q --filter ancestor=kubicrend:dev) ss -ulpn
+ws docker exec $(ws docker ps -q --filter ancestor=kubicrend:dev) ss -ulpn
 ```
 
 Expected: UDP listeners on `7777` and the beacon port. Record the actual beacon port (spike observed `14001` even when `15000` was requested) — this becomes the exposed port set and confirms/updates the design's known-unknown.
@@ -354,7 +354,7 @@ Expected: UDP listeners on `7777` and the beacon port. Record the actual beacon 
 While the container runs, verify the entrypoint placed config and that `-userdir` is honored:
 
 ```
-ws docker exec $(docker ps -q --filter ancestor=kubicrend:dev) find /data -iname "*.ini"
+ws docker exec $(ws docker ps -q --filter ancestor=kubicrend:dev) find /data -iname "*.ini"
 ```
 
 Expected: `Game.ini`/`Server.ini`/`Engine.ini`/`Authentication.ini` exist under `/data` (world save data also lands here). If the server wrote its own Config tree at a different path than the entrypoint's `CFG_DEST`, update `CFG_DEST` in `entrypoint.sh` to match and rebuild.

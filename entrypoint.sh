@@ -66,4 +66,12 @@ echo "==> Launching Rend: mode=$REND_MODE game=$REND_GAME_PORT beacon=$REND_BEAC
 xvfb-run -a wine "$SERVER_BIN" -log \
   BeaconPort="$REND_BEACON_PORT" Port="$REND_GAME_PORT" \
   -userdir="$REND_USERDIR" $NOEAC_ARG $REND_EXTRA_ARGS &
-wait $!
+SERVER_PID=$!
+# Forward pod-termination signals so the server shuts down cleanly (final world
+# save) instead of being SIGKILLed when the grace period expires. As PID 1 this
+# script gets the SIGTERM; xvfb-run relays it to Wine. `wait` returns the moment
+# a trapped signal arrives, so re-wait in a loop until the process is truly gone.
+trap 'echo "==> Forwarding shutdown to the Rend server..."; kill -TERM "$SERVER_PID" 2>/dev/null || true' TERM INT
+while kill -0 "$SERVER_PID" 2>/dev/null; do
+  wait "$SERVER_PID"
+done
