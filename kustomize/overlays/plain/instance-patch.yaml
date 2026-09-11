@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rend
+spec:
+  template:
+    spec:
+      containers:
+        - name: rend-server
+          # Flavor 2 is the portable, platform-free path — default to vanilla so
+          # the server boots standalone (stock DLL, EAC on) with no index-server
+          # infrastructure. Switch to "modded" once Authentication.ini endpoints
+          # and a reachable index server are supplied (see the gitops overlay).
+          env:
+            - name: REND_MODE
+              value: "vanilla"

@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rend-config
+data:
+  config.ini: |
+    # Gameplay tuning + index behavior. WebUpdateDisable=True for non-7777/direct-connect.
+    WebUpdateInterval=90
+    WebUpdateDisable=False
+    FixTeleportExploit=True
+    PetInventoryDisabled=True
+    DisableArmoryStealing=True
+  Game.ini: |
+    [/Script/Otherlands.OtherlandsGameMode]
+  Server.ini: |
+    ; Admin/cheater identities by Steam user id, e.g. Cervator$f=2$2320887228
+  Engine.ini: |
+    [/Script/Engine.Engine]
+  Authentication.ini: |
+    [/Script/Otherlands.GameCredentialsProvider]
+    AuthEndpoint="https://rendapi.herokuapp.com"
+    [/Script/Otherlands.ClientGatekeeper]
+    IndexEndpoint="https://rendapi.herokuapp.com"
+    TicketEndpoint="https://rendapi.herokuapp.com"
+    [/Script/Otherlands.AccountService]
+    AccountEndpoint="https://rendapi.herokuapp.com"
+    [/Script/Otherlands.DatabaseService]
+    DatabaseEndpoint="https://rendapi.herokuapp.com"

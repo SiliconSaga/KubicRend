@@ -1,0 +1,5 @@
+kustomize/
+docker/
+scripts/
+*.md
+.git

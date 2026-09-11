@@ -26,7 +26,7 @@
 - **Ports:** game `7777` (must be exactly 7777 for the in-game server browser), beacon `15000`. Default k8s exposure = hostPort 7777+15000. Fallback = NodePort (30000-32767) + `WebUpdateDisable=True` + direct-connect.
 - **Registry/naming:** publish to `ghcr.io/siliconsaga/kubicrend`, tags `type=sha,format=long` + `:latest` on the default branch, single-arch amd64, GHCR package made public.
 - **Kustomize is the single source of truth** — no parallel Helm rendering. Flavor 2 must run with a bare `kubectl apply -k overlays/plain` and no extra binaries.
-- **git/CR/commit discipline:** use `ws commit <comp> <bodyfile>` / `ws push <comp>` / `ws cr <comp> …` — never raw `git commit`/`git push`/`gh pr create`. One command per shell call (no `;`/`&&`/`|`). Docker on Windows/git-bash needs `MSYS_NO_PATHCONV=1` on runs that pass container-absolute paths as args.
+- **git/CR/commit discipline:** use `ws commit <comp> <bodyfile>` / `ws push <comp>` / `ws cr <comp> …` — never raw `git commit`/`git push`/`gh pr create`. One command per shell call (no `;`/`&&`/`|`). Run docker via `ws docker …` — on Windows/git-bash it scopes `MSYS_NO_PATHCONV=1` to that one call so container-absolute paths (`/data`, `-v vol:/path`) reach docker unmangled. `nerdctl` has no wrapper, so those runs keep an explicit `MSYS_NO_PATHCONV=1` prefix.
 - **No hard-wrapped prose** in docs — one paragraph per physical line; code/YAML/tables exempt.
 - **Observability:** logs (OTel→Loki, already cluster-wide) + cAdvisor only. NO ServiceMonitor — Rend has no metrics endpoint.
 
@@ -75,7 +75,7 @@ Expected: `components/kubicrend/` exists with `origin` (your fork) and `upstream
 Copy from the reference clone into the component. Run each as its own command:
 
 ```
-MSYS_NO_PATHCONV=1 mkdir -p components/kubicrend/vendor/config
+mkdir -p components/kubicrend/vendor/config
 ```
 ```
 cp .tmp/rendrevival-ref/code/dll-configurable-index-server-url/PhysX3Cooking_x64.dll components/kubicrend/vendor/PhysX3Cooking_x64.dll
@@ -324,7 +324,7 @@ scripts/
 Run (from the component dir; the game download makes this a multi-minute build):
 
 ```
-MSYS_NO_PATHCONV=1 docker build -t kubicrend:dev components/kubicrend
+ws docker build -t kubicrend:dev components/kubicrend
 ```
 
 Expected: build succeeds; the `test -f …OtherlandsServer…exe` line confirms the Windows server (not the Linux redist) landed. If WineHQ install or `wineboot` fails, the documented fallback is to base off the spike's known-good `scottyhardy/docker-wine:latest` (see `.tmp/rend-spike/Dockerfile`) and re-add SteamCMD + the DLL layers — capture which step failed before switching.
@@ -334,7 +334,7 @@ Expected: build succeeds; the `test -f …OtherlandsServer…exe` line confirms 
 Run interactively and watch stdout:
 
 ```
-MSYS_NO_PATHCONV=1 docker run --rm -e WAIT=60 -v kubicrend-data:/data kubicrend:dev
+ws docker run --rm -e WAIT=60 -v kubicrend-data:/data kubicrend:dev
 ```
 
 Expected (success shape): UE4 log reaches `LogInit: Display: Game Engine Initialized` → `LogGameMode: Match State Changed … to InProgress` → `LogServerPerf` ticking, no Wine stack trace or missing-DLL error. (This matches the spike's proven output.)
@@ -344,7 +344,7 @@ Expected (success shape): UE4 log reaches `LogInit: Display: Game Engine Initial
 In a second terminal, exec into the running container:
 
 ```
-docker exec $(docker ps -q --filter ancestor=kubicrend:dev) ss -ulpn
+ws docker exec $(ws docker ps -q --filter ancestor=kubicrend:dev) ss -ulpn
 ```
 
 Expected: UDP listeners on `7777` and the beacon port. Record the actual beacon port (spike observed `14001` even when `15000` was requested) — this becomes the exposed port set and confirms/updates the design's known-unknown.
@@ -354,7 +354,7 @@ Expected: UDP listeners on `7777` and the beacon port. Record the actual beacon 
 While the container runs, verify the entrypoint placed config and that `-userdir` is honored:
 
 ```
-docker exec $(docker ps -q --filter ancestor=kubicrend:dev) find /data -iname "*.ini"
+ws docker exec $(ws docker ps -q --filter ancestor=kubicrend:dev) find /data -iname "*.ini"
 ```
 
 Expected: `Game.ini`/`Server.ini`/`Engine.ini`/`Authentication.ini` exist under `/data` (world save data also lands here). If the server wrote its own Config tree at a different path than the entrypoint's `CFG_DEST`, update `CFG_DEST` in `entrypoint.sh` to match and rebuild.
@@ -364,7 +364,7 @@ Expected: `Game.ini`/`Server.ini`/`Engine.ini`/`Authentication.ini` exist under 
 Run:
 
 ```
-MSYS_NO_PATHCONV=1 docker run --rm -e REND_MODE=vanilla -v kubicrend-data:/data kubicrend:dev
+ws docker run --rm -e REND_MODE=vanilla -v kubicrend-data:/data kubicrend:dev
 ```
 
 Expected: boots to `Match State … InProgress` with EAC enabled (no `-NoEAC`), stock DLL in place — the spike proved this boots. Confirms the mode swap works both ways.
@@ -549,7 +549,7 @@ labels:
 Run:
 
 ```
-MSYS_NO_PATHCONV=1 docker run --rm -v "//d/Dev/GitWS/yggdrasil/components/kubicrend:/work" -w /work registry.k8s.io/kustomize/kustomize:v5.4.3 build kustomize/base
+ws docker run --rm -v "//d/Dev/GitWS/yggdrasil/components/kubicrend:/work" -w /work registry.k8s.io/kustomize/kustomize:v5.4.3 build kustomize/base
 ```
 
 If a local `kustomize` + `kubeconform` is available, prefer:
@@ -631,7 +631,7 @@ Run `kustomize build components/kubicrend/kustomize/overlays/plain`. Expected: n
 Rancher Desktop uses containerd; make `kubicrend:dev` available to k3s. Run:
 
 ```
-MSYS_NO_PATHCONV=1 docker save kubicrend:dev -o .tmp/kubicrend-dev.tar
+ws docker save kubicrend:dev -o .tmp/kubicrend-dev.tar
 ```
 ```
 MSYS_NO_PATHCONV=1 nerdctl --namespace k8s.io load -i .tmp/kubicrend-dev.tar
@@ -1041,7 +1041,7 @@ REND_BEACON_PORT=15000
 Copy the vendored config into `docker/config/` so operators can edit locally:
 
 ```
-MSYS_NO_PATHCONV=1 mkdir -p components/kubicrend/docker/config
+mkdir -p components/kubicrend/docker/config
 ```
 ```
 cp components/kubicrend/vendor/config/config.ini components/kubicrend/vendor/config/Game.ini components/kubicrend/vendor/config/Server.ini components/kubicrend/vendor/config/Engine.ini components/kubicrend/vendor/config/Authentication.ini components/kubicrend/docker/config/
@@ -1056,7 +1056,7 @@ Create `docker/README.md`: explain `cp .env.example .env`, editing `config/*.ini
 Run:
 
 ```
-MSYS_NO_PATHCONV=1 docker compose -f components/kubicrend/docker/docker-compose.yml up
+ws docker compose -f components/kubicrend/docker/docker-compose.yml up
 ```
 
 (Use `image: kubicrend:dev` temporarily if GHCR isn't public yet.) Expected: server boots to `Match State … InProgress`.
@@ -1149,7 +1149,7 @@ fi
 Run:
 
 ```
-MSYS_NO_PATHCONV=1 bash components/kubicrend/scripts/start-server.sh testarena vanilla
+bash components/kubicrend/scripts/start-server.sh testarena vanilla
 ```
 
 Expected: `kustomize build OK`, overlay written under `kustomize/overlays/testarena/` (gitignored). Do not apply (hostPort would collide with the running instance on a single node).
