@@ -50,8 +50,15 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Hand ownership of the baked game + steam dirs to the runtime user (uid 1010).
 RUN chown -R 1010:1010 /opt/steamcmd /opt/rend /opt/rend-dll /data
 
+# OPENSSL_ia32cap masks a CPU-feature bit that the game's bundled OpenSSL 1.0.2h
+# mis-handles on recent Intel CPUs (validated on an i7-14700F): without it the
+# server SEH-crashes under Wine the instant it does TLS to the index server
+# (LogServerGatekeeper registration). Same ~0x20000000 workaround the Rend
+# client community uses for the Intel-only startup crash. With it, the server
+# completes the registration TLS round-trip and stays up (Loki, 2026-09-10).
 ENV REND_MODE=modded \
-    REND_DIR=/opt/rend
+    REND_DIR=/opt/rend \
+    OPENSSL_ia32cap="~0x20000000"
 # Keep the base ENTRYPOINT (provisions wineuser + prefix, then execs CMD).
 # Our launcher is the CMD, so it runs inside that provisioned environment.
 CMD ["/usr/local/bin/entrypoint.sh"]
